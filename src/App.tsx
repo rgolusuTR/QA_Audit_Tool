@@ -15,7 +15,6 @@ const getApiBaseUrl = () => {
     // Extract the codespace name from the hostname
     const hostname = window.location.hostname;
     const codespaceUrl = hostname
-      .replace(/^[^-]+-/, "")
       .replace(/\.github\.dev$/, "")
       .replace(/\.githubpreview\.dev$/, "");
     return `https://${codespaceUrl}-8000.app.github.dev`;
@@ -24,13 +23,8 @@ const getApiBaseUrl = () => {
   // Check if we're accessing via GitHub Pages
   if (window.location.hostname.includes("github.io")) {
     // For GitHub Pages, we need to use a publicly accessible Codespace URL
-    // This would be provided as an environment variable or configuration
-    const codespaceBackendUrl = process.env.REACT_APP_CODESPACE_BACKEND_URL;
-    if (codespaceBackendUrl) {
-      return codespaceBackendUrl;
-    }
-    // Fallback: show error message to user about backend setup
-    return null;
+    // Use the known active Codespace URL
+    return "https://organic-space-fishstick-rqpqvrw99w4f57x4-8000.app.github.dev";
   }
 
   // Default to localhost for local development
