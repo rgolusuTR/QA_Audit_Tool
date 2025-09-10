@@ -23,7 +23,7 @@ const getApiBaseUrl = () => {
   // Check if we're accessing via GitHub Pages
   if (window.location.hostname.includes("github.io")) {
     // For GitHub Pages, we need to use a publicly accessible Codespace URL
-    // Use the known active Codespace URL
+    // Use the known active Codespace URL - Updated for deployment
     return "https://organic-space-fishstick-rqpqvrw99w4f57x4-8000.app.github.dev";
   }
 
