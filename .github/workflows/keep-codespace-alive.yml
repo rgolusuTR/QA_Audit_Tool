@@ -1,0 +1,69 @@
+name: Keep Codespace Alive
+
+on:
+  schedule:
+    # Run every 25 minutes to prevent 30-minute auto-stop
+    - cron: "*/25 * * * *"
+  workflow_dispatch:
+    # Allow manual triggering
+
+jobs:
+  ping-codespaces:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Active Codespaces
+        run: |
+          echo "🔄 Checking Codespace backends..."
+
+          # List of potential Codespace URLs
+          urls=(
+            "https://organic-space-fishstick-rqpqvrw99w4f57x4-8000.app.github.dev"
+            "https://scaling-space-enigma-w5x4q7g5xvwf5p9x-8000.app.github.dev"
+            "https://friendly-space-disco-v7w9x4r6qpgj2k8m-8000.app.github.dev"
+            "https://improved-space-journey-p9q2w5r8txnm3k7j-8000.app.github.dev"
+          )
+
+          active_count=0
+
+          for url in "${urls[@]}"; do
+            echo "🔍 Testing: $url"
+            
+            # Try to ping the health endpoint with timeout
+            if curl -f --max-time 10 --silent "$url/api/health" > /dev/null 2>&1; then
+              echo "✅ Active: $url"
+              active_count=$((active_count + 1))
+              
+              # Make a more substantial request to keep it active
+              curl -f --max-time 30 --silent \
+                -X POST "$url/api/audit" \
+                -H "Content-Type: application/json" \
+                -d '{"url": "https://example.com", "max_concurrent": 1, "timeout": 5}' \
+                > /dev/null 2>&1 || echo "⚠️  Health check passed but audit endpoint failed for $url"
+            else
+              echo "❌ Inactive: $url"
+            fi
+            
+            echo "---"
+          done
+
+          echo "📊 Summary: $active_count active Codespace(s) found"
+
+          if [ $active_count -eq 0 ]; then
+            echo "⚠️  No active Codespaces found. Consider starting a new one."
+            echo "🔗 Go to: https://github.com/${{ github.repository }}"
+            echo "📝 Click 'Code' > 'Codespaces' > 'Create codespace on main'"
+          else
+            echo "✅ Keep-alive successful for $active_count Codespace(s)"
+          fi
+
+      - name: Update Status Badge
+        if: always()
+        run: |
+          # Create a simple status indicator
+          if [ $active_count -gt 0 ]; then
+            echo "Backend Status: ✅ $active_count Active" > codespace-status.txt
+          else
+            echo "Backend Status: ❌ No Active Codespaces" > codespace-status.txt
+          fi
+
+          echo "Last checked: $(date -u)" >> codespace-status.txt
