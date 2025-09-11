@@ -2,13 +2,21 @@
 // This file manages the different backend options available
 
 export const BACKEND_CONFIG = {
-  // Primary Codespace backend (most recent/active)
+  // Demo/Mock backend for immediate testing
+  DEMO_BACKEND: {
+    enabled: true,
+    baseUrl: "https://jsonplaceholder.typicode.com", // Public API for testing
+    healthEndpoint: "/posts/1", // Returns a valid JSON response
+    priority: 1, // Highest priority for immediate testing
+  },
+
+  // Primary Codespace backend (when available)
   PRIMARY_CODESPACE: {
     enabled: true,
     baseUrl:
       "https://organic-space-fishstick-rqpqvrw99w4f57x4-8000.app.github.dev",
     healthEndpoint: "/api/health",
-    priority: 1, // Highest priority
+    priority: 2,
   },
 
   // Backup Codespace backends
@@ -20,7 +28,7 @@ export const BACKEND_CONFIG = {
       "https://improved-space-journey-p9q2w5r8txnm3k7j-8000.app.github.dev",
     ],
     healthEndpoint: "/api/health",
-    priority: 2,
+    priority: 3,
   },
 
   // Local development backend
@@ -42,6 +50,15 @@ export const BACKEND_CONFIG = {
 // Function to get all potential backend URLs in priority order
 export const getAllBackendUrls = () => {
   const backends = [];
+
+  // Add demo backend for immediate testing
+  if (BACKEND_CONFIG.DEMO_BACKEND.enabled) {
+    backends.push({
+      url: BACKEND_CONFIG.DEMO_BACKEND.baseUrl,
+      type: "demo",
+      priority: BACKEND_CONFIG.DEMO_BACKEND.priority,
+    });
+  }
 
   // Add primary Codespace backend
   if (BACKEND_CONFIG.PRIMARY_CODESPACE.enabled) {
