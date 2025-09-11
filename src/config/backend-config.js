@@ -14,7 +14,7 @@ export const BACKEND_CONFIG = {
   PRIMARY_CODESPACE: {
     enabled: true,
     baseUrl:
-      "https://organic-space-fishstick-rqpqvrw99w4f57x4-8000.app.github.dev",
+      "https://fantastic-space-engine-rqpqvrw99qxfxqpg-8000.app.github.dev",
     healthEndpoint: "/api/health",
     priority: 2,
   },
