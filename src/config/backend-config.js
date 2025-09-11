@@ -2,20 +2,19 @@
 // This file manages the different backend options available
 
 export const BACKEND_CONFIG = {
-  // GitHub Actions backend (when running in GitHub Actions)
-  GITHUB_ACTIONS: {
+  // Primary Codespace backend (most recent/active)
+  PRIMARY_CODESPACE: {
     enabled: true,
-    // This will be dynamically set when running in GitHub Actions
-    baseUrl: process.env.GITHUB_ACTIONS_BACKEND_URL || null,
+    baseUrl:
+      "https://organic-space-fishstick-rqpqvrw99w4f57x4-8000.app.github.dev",
     healthEndpoint: "/api/health",
     priority: 1, // Highest priority
   },
 
-  // Codespace backends (existing configuration preserved)
-  CODESPACES: {
+  // Backup Codespace backends
+  BACKUP_CODESPACES: {
     enabled: true,
     urls: [
-      "https://organic-space-fishstick-rqpqvrw99w4f57x4-8000.app.github.dev",
       "https://scaling-space-enigma-w5x4q7g5xvwf5p9x-8000.app.github.dev",
       "https://friendly-space-disco-v7w9x4r6qpgj2k8m-8000.app.github.dev",
       "https://improved-space-journey-p9q2w5r8txnm3k7j-8000.app.github.dev",
@@ -34,9 +33,9 @@ export const BACKEND_CONFIG = {
 
   // Connection settings
   CONNECTION: {
-    timeout: 5000, // 5 seconds
-    retryAttempts: 3,
-    retryDelay: 1000, // 1 second
+    timeout: 3000, // 3 seconds (faster timeout)
+    retryAttempts: 2, // Fewer retries for faster failover
+    retryDelay: 500, // Faster retry
   },
 };
 
@@ -44,25 +43,22 @@ export const BACKEND_CONFIG = {
 export const getAllBackendUrls = () => {
   const backends = [];
 
-  // Add GitHub Actions backend if available
-  if (
-    BACKEND_CONFIG.GITHUB_ACTIONS.enabled &&
-    BACKEND_CONFIG.GITHUB_ACTIONS.baseUrl
-  ) {
+  // Add primary Codespace backend
+  if (BACKEND_CONFIG.PRIMARY_CODESPACE.enabled) {
     backends.push({
-      url: BACKEND_CONFIG.GITHUB_ACTIONS.baseUrl,
-      type: "github-actions",
-      priority: BACKEND_CONFIG.GITHUB_ACTIONS.priority,
+      url: BACKEND_CONFIG.PRIMARY_CODESPACE.baseUrl,
+      type: "primary-codespace",
+      priority: BACKEND_CONFIG.PRIMARY_CODESPACE.priority,
     });
   }
 
-  // Add Codespace backends
-  if (BACKEND_CONFIG.CODESPACES.enabled) {
-    BACKEND_CONFIG.CODESPACES.urls.forEach((url) => {
+  // Add backup Codespace backends
+  if (BACKEND_CONFIG.BACKUP_CODESPACES.enabled) {
+    BACKEND_CONFIG.BACKUP_CODESPACES.urls.forEach((url) => {
       backends.push({
         url: url,
-        type: "codespace",
-        priority: BACKEND_CONFIG.CODESPACES.priority,
+        type: "backup-codespace",
+        priority: BACKEND_CONFIG.BACKUP_CODESPACES.priority,
       });
     });
   }
@@ -80,21 +76,8 @@ export const getAllBackendUrls = () => {
   return backends.sort((a, b) => a.priority - b.priority);
 };
 
-// Function to detect if running in GitHub Actions environment
-export const isGitHubActions = () => {
-  return (
-    typeof process !== "undefined" &&
-    process.env &&
-    process.env.GITHUB_ACTIONS === "true"
-  );
-};
-
 // Function to detect current environment
 export const detectEnvironment = () => {
-  if (isGitHubActions()) {
-    return "github-actions";
-  }
-
   if (
     typeof window !== "undefined" &&
     window.location.hostname.includes("github.dev")
@@ -109,7 +92,20 @@ export const detectEnvironment = () => {
     return "local";
   }
 
+  if (
+    typeof window !== "undefined" &&
+    window.location.hostname.includes("github.io")
+  ) {
+    return "github-pages";
+  }
+
   return "production";
+};
+
+// Function to get the most likely active Codespace URL
+export const getActiveCodespaceUrl = () => {
+  // Return the primary Codespace URL - this should be updated when you start a new Codespace
+  return BACKEND_CONFIG.PRIMARY_CODESPACE.baseUrl;
 };
 
 export default BACKEND_CONFIG;
