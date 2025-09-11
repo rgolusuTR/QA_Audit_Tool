@@ -1,0 +1,99 @@
+name: Backend Service - Continuous Operation
+
+on:
+  schedule:
+    # Run every 4 hours with staggered times to ensure overlap
+    - cron: "0 0,4,8,12,16,20 * * *" # Every 4 hours starting at midnight
+    - cron: "30 2,6,10,14,18,22 * * *" # Staggered backup runs every 4 hours
+  workflow_dispatch: # Allow manual triggering
+  repository_dispatch:
+    types: [restart-backend]
+
+jobs:
+  run-backend-service:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350 # Just under 6 hours (GitHub's limit)
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r QA_Audit_Tool/requirements.txt
+
+      - name: Create service status file
+        run: |
+          mkdir -p /tmp/service-status
+          echo "$(date): Service starting" > /tmp/service-status/status.log
+
+      - name: Run backend service with auto-restart
+        run: |
+          cd QA_Audit_Tool
+
+          # Start the service and keep it running until near timeout
+          python run_audit.py &
+          SERVICE_PID=$!
+
+          # Calculate end time (5 hours 45 minutes from now to allow graceful shutdown)
+          END_TIME=$(($(date +%s) + 20700))
+
+          echo "Service started with PID: $SERVICE_PID"
+          echo "Will run until: $(date -d @$END_TIME)"
+
+          # Keep the workflow running until near timeout
+          while [ $(date +%s) -lt $END_TIME ]; do
+            # Check if service is still running
+            if ! ps -p $SERVICE_PID > /dev/null; then
+              echo "$(date): Service stopped unexpectedly, restarting..."
+              python run_audit.py &
+              SERVICE_PID=$!
+              echo "$(date): Service restarted with PID: $SERVICE_PID"
+            fi
+            
+            # Log status every 5 minutes and create health check
+            echo "$(date): Service running with PID: $SERVICE_PID"
+            echo "$(date): Service healthy" > /tmp/service-status/health.txt
+            
+            # Sleep for 5 minutes
+            sleep 300
+          done
+
+          echo "$(date): Approaching workflow timeout, gracefully shutting down..."
+          kill $SERVICE_PID 2>/dev/null || true
+          echo "$(date): Service shutdown complete"
+
+      - name: Upload service logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: service-logs-${{ github.run_number }}
+          path: /tmp/service-status/
+          retention-days: 1
+
+      - name: Trigger next workflow run
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Wait 30 seconds before triggering next run to avoid overlap
+            await new Promise(resolve => setTimeout(resolve, 30000));
+
+            try {
+              await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'backend-continuous.yml',
+                ref: 'main'
+              });
+              console.log('Next workflow run triggered successfully');
+            } catch (error) {
+              console.log('Failed to trigger next workflow run:', error.message);
+            }

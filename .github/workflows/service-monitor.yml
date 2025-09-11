@@ -1,0 +1,104 @@
+name: Backend Service - Monitor & Health Check
+
+on:
+  schedule:
+    - cron: "*/10 * * * *" # Check every 10 minutes
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  monitor-service:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check running workflows
+        id: check_workflows
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const workflows = await github.rest.actions.listWorkflowRunsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              status: 'in_progress',
+              per_page: 50
+            });
+
+            // Check if our main service workflow is running
+            const serviceRunning = workflows.data.workflow_runs.some(
+              run => run.name === 'Backend Service - Continuous Operation' && 
+                     run.status === 'in_progress'
+            );
+
+            console.log(`Found ${workflows.data.workflow_runs.length} running workflows`);
+            console.log(`Service workflow running: ${serviceRunning}`);
+
+            // Count how many service workflows are running
+            const serviceCount = workflows.data.workflow_runs.filter(
+              run => run.name === 'Backend Service - Continuous Operation' && 
+                     run.status === 'in_progress'
+            ).length;
+
+            return { 
+              serviceRunning: serviceRunning,
+              serviceCount: serviceCount,
+              totalRunning: workflows.data.workflow_runs.length
+            };
+
+      - name: Log workflow status
+        run: |
+          echo "Service running: ${{ fromJson(steps.check_workflows.outputs.result).serviceRunning }}"
+          echo "Service instances: ${{ fromJson(steps.check_workflows.outputs.result).serviceCount }}"
+          echo "Total running workflows: ${{ fromJson(steps.check_workflows.outputs.result).totalRunning }}"
+
+      - name: Start service if not running
+        if: ${{ !fromJson(steps.check_workflows.outputs.result).serviceRunning }}
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            console.log('No service workflow running, starting new instance...');
+
+            try {
+              await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'backend-continuous.yml',
+                ref: 'main'
+              });
+              console.log('Service workflow started successfully');
+            } catch (error) {
+              console.error('Failed to start service workflow:', error.message);
+              throw error;
+            }
+
+      - name: Check for too many instances
+        if: ${{ fromJson(steps.check_workflows.outputs.result).serviceCount > 2 }}
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            console.log('Warning: Multiple service instances detected');
+            console.log('Service instances: ${{ fromJson(steps.check_workflows.outputs.result).serviceCount }}');
+
+            // This is just a warning - we let the workflows manage themselves
+            // to avoid accidentally stopping a healthy service
+
+      - name: Create status report
+        run: |
+          echo "## Service Status Report - $(date)" >> /tmp/status-report.md
+          echo "- Service Running: ${{ fromJson(steps.check_workflows.outputs.result).serviceRunning }}" >> /tmp/status-report.md
+          echo "- Service Instances: ${{ fromJson(steps.check_workflows.outputs.result).serviceCount }}" >> /tmp/status-report.md
+          echo "- Total Running Workflows: ${{ fromJson(steps.check_workflows.outputs.result).totalRunning }}" >> /tmp/status-report.md
+          echo "- Check Time: $(date)" >> /tmp/status-report.md
+          echo "" >> /tmp/status-report.md
+
+      - name: Upload status report
+        uses: actions/upload-artifact@v3
+        with:
+          name: service-status-${{ github.run_number }}
+          path: /tmp/status-report.md
+          retention-days: 1
