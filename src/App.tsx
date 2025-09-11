@@ -1,12 +1,34 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { URLInput } from "./components/URLInput";
 import { AuditResults } from "./components/AuditResults";
 import { LoadingSpinner } from "./components/LoadingSpinner";
 import { SEOAuditResult } from "./types/seo";
 import axios from "axios";
 
-// Dynamic API URL detection for different environments
-const getApiBaseUrl = () => {
+// Helper function to create fetch with timeout using AbortController
+const fetchWithTimeout = async (
+  url: string,
+  options: RequestInit = {},
+  timeoutMs: number = 5000
+) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+};
+
+// Dynamic API URL detection with fallback mechanisms
+const getApiBaseUrl = async () => {
   // Check if we're in a GitHub Codespace
   if (
     window.location.hostname.includes("github.dev") ||
@@ -22,16 +44,48 @@ const getApiBaseUrl = () => {
 
   // Check if we're accessing via GitHub Pages
   if (window.location.hostname.includes("github.io")) {
-    // For GitHub Pages, we need to use a publicly accessible Codespace URL
-    // Use the known active Codespace URL - Updated for deployment
-    return "https://organic-space-fishstick-rqpqvrw99w4f57x4-8000.app.github.dev";
+    // Try multiple potential Codespace URLs
+    const potentialUrls = [
+      "https://organic-space-fishstick-rqpqvrw99w4f57x4-8000.app.github.dev",
+      // Add more potential Codespace URLs as backups
+      "https://scaling-space-enigma-w5x4q7g5xvwf5p9x-8000.app.github.dev",
+      "https://friendly-space-disco-v7w9x4r6qpgj2k8m-8000.app.github.dev",
+      "https://improved-space-journey-p9q2w5r8txnm3k7j-8000.app.github.dev",
+    ];
+
+    // Test each URL to find an active one
+    for (const url of potentialUrls) {
+      try {
+        console.log(`🔍 Testing Codespace: ${url}`);
+        const response = await fetchWithTimeout(
+          `${url}/api/health`,
+          {
+            method: "GET",
+          },
+          5000
+        );
+
+        if (response.ok) {
+          console.log(`✅ Found active Codespace: ${url}`);
+          return url;
+        }
+      } catch (error) {
+        console.log(`❌ Codespace not active: ${url}`);
+        continue;
+      }
+    }
+
+    // If no active Codespace found, return null to show setup instructions
+    console.log("❌ No active Codespace found");
+    return null;
   }
 
   // Default to localhost for local development
   return "http://localhost:8000";
 };
 
-const API_BASE_URL = getApiBaseUrl();
+// We'll get the API URL dynamically in the component
+let API_BASE_URL: string | null = null;
 
 function App() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -39,6 +93,44 @@ function App() {
   const [error, setError] = useState<string>("");
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState("");
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [connectionStatus, setConnectionStatus] = useState<string>(
+    "Checking backend connection..."
+  );
+
+  // Initialize API URL detection on component mount
+  useEffect(() => {
+    const initializeApiUrl = async () => {
+      try {
+        console.log("🔄 Initializing API URL detection...");
+        setConnectionStatus("Detecting backend server...");
+
+        const apiUrl = await getApiBaseUrl();
+        API_BASE_URL = apiUrl;
+
+        if (apiUrl) {
+          console.log("✅ Backend API URL initialized:", apiUrl);
+          setConnectionStatus(`Connected to: ${apiUrl}`);
+        } else {
+          console.log("❌ No active backend found");
+          setConnectionStatus("No active backend server found");
+          setError(
+            "No active Codespace backend found. Please start a new Codespace with the backend server running, or ensure your current Codespace is active and the backend is running on port 8000."
+          );
+        }
+      } catch (error) {
+        console.error("❌ Failed to initialize API URL:", error);
+        setConnectionStatus("Failed to detect backend");
+        setError(
+          "Failed to detect backend server. Please check your connection and try refreshing the page."
+        );
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+
+    initializeApiUrl();
+  }, []);
 
   const simulateProgress = () => {
     const steps = [
@@ -210,6 +302,71 @@ function App() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="container mx-auto px-4 py-8">
+        {/* Connection Status Display */}
+        {isInitializing && (
+          <div className="max-w-4xl mx-auto mb-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <svg
+                  className="animate-spin h-5 w-5 text-blue-500"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-blue-800">
+                  Initializing Backend Connection
+                </h3>
+                <p className="text-sm text-blue-700">{connectionStatus}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!isInitializing && API_BASE_URL && (
+          <div className="max-w-4xl mx-auto mb-8 bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <svg
+                  className="h-5 w-5 text-green-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-green-800">
+                  Backend Connected
+                </h3>
+                <p className="text-sm text-green-700">{connectionStatus}</p>
+                <p className="text-xs text-green-600 mt-1">
+                  ✅ Ready to analyze websites with dynamic Codespace detection
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {error && (
           <div className="max-w-4xl mx-auto mb-8 bg-red-50 border border-red-200 rounded-lg p-4">
             <div className="flex items-center">
