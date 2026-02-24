@@ -45,7 +45,7 @@ export const AuditResults: React.FC<AuditResultsProps> = ({ results, onNewAudit 
       id: 'overview',
       label: 'Overview',
       icon: <BarChart3 className="w-4 h-4" />,
-      count: results.statistics.total_links
+      count: results?.statistics?.total_links || 0
     },
     {
       id: 'seo-metrics',
@@ -62,13 +62,13 @@ export const AuditResults: React.FC<AuditResultsProps> = ({ results, onNewAudit 
       id: 'link-analysis',
       label: 'Link Analysis',
       icon: <LinkIcon className="w-4 h-4" />,
-      count: results.statistics?.broken_links || 0
+      count: results?.statistics?.broken_links || 0
     },
     {
       id: 'eloqua-forms',
       label: 'Eloqua Forms',
       icon: <FormInput className="w-4 h-4" />,
-      count: results.eloqua_form_fields?.length || 0
+      count: results?.eloqua_form_fields?.length || 0
     }
   ];
 
