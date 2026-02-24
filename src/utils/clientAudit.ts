@@ -1,4 +1,4 @@
-import { SEOAuditResult, SEOMetrics, LinkResult, Statistics, ErrorsByCategory, ImageAnalysis, Misspelling } from '../types/seo';
+import { SEOAuditResult, SEOMetrics, LinkResult, Statistics, ErrorsByCategory, ImageAnalysis, Misspelling, SEOError, ImageIssue, Summary, PerformanceMetrics } from '../types/seo';
 
 /**
  * Client-side QA Audit Tool
@@ -402,6 +402,205 @@ function checkSpelling(html: string): Misspelling[] {
 }
 
 /**
+ * Generate SEO errors from audit results
+ */
+function generateSEOErrors(seoMetrics: SEOMetrics, imageAnalysis: ImageAnalysis[], statistics: Statistics): SEOError[] {
+  const errors: SEOError[] = [];
+  
+  // Title checks
+  if (!seoMetrics.title) {
+    errors.push({
+      type: 'critical',
+      category: 'seo',
+      message: 'Missing page title',
+      recommendation: 'Add a descriptive title tag to improve SEO',
+    });
+  } else if (seoMetrics.title_length < 30) {
+    errors.push({
+      type: 'warning',
+      category: 'seo',
+      message: 'Title is too short',
+      value: seoMetrics.title_length,
+      recommendation: 'Title should be between 30-60 characters',
+    });
+  } else if (seoMetrics.title_length > 60) {
+    errors.push({
+      type: 'warning',
+      category: 'seo',
+      message: 'Title is too long',
+      value: seoMetrics.title_length,
+      recommendation: 'Title should be between 30-60 characters',
+    });
+  }
+  
+  // Meta description checks
+  if (!seoMetrics.meta_description) {
+    errors.push({
+      type: 'critical',
+      category: 'seo',
+      message: 'Missing meta description',
+      recommendation: 'Add a meta description to improve search engine visibility',
+    });
+  } else if (seoMetrics.meta_description_length < 120) {
+    errors.push({
+      type: 'warning',
+      category: 'seo',
+      message: 'Meta description is too short',
+      value: seoMetrics.meta_description_length,
+      recommendation: 'Meta description should be between 120-160 characters',
+    });
+  } else if (seoMetrics.meta_description_length > 160) {
+    errors.push({
+      type: 'warning',
+      category: 'seo',
+      message: 'Meta description is too long',
+      value: seoMetrics.meta_description_length,
+      recommendation: 'Meta description should be between 120-160 characters',
+    });
+  }
+  
+  // H1 checks
+  if (seoMetrics.h1_tags.length === 0) {
+    errors.push({
+      type: 'critical',
+      category: 'seo',
+      message: 'Missing H1 tag',
+      recommendation: 'Add exactly one H1 tag to the page',
+    });
+  } else if (seoMetrics.h1_tags.length > 1) {
+    errors.push({
+      type: 'warning',
+      category: 'seo',
+      message: 'Multiple H1 tags found',
+      value: seoMetrics.h1_tags.length,
+      recommendation: 'Use only one H1 tag per page',
+    });
+  }
+  
+  // Image alt text checks
+  if (seoMetrics.images_without_alt > 0) {
+    errors.push({
+      type: 'warning',
+      category: 'accessibility',
+      message: `${seoMetrics.images_without_alt} images missing alt text`,
+      value: seoMetrics.images_without_alt,
+      recommendation: 'Add descriptive alt text to all images for accessibility',
+    });
+  }
+  
+  // Broken links
+  if (statistics.broken_links > 0) {
+    errors.push({
+      type: 'critical',
+      category: 'technical',
+      message: `${statistics.broken_links} broken links found`,
+      value: statistics.broken_links,
+      recommendation: 'Fix or remove broken links',
+    });
+  }
+  
+  // Page size
+  if (seoMetrics.page_size > 3000000) { // 3MB
+    errors.push({
+      type: 'warning',
+      category: 'performance',
+      message: 'Page size is large',
+      value: Math.round(seoMetrics.page_size / 1024),
+      recommendation: 'Optimize images and resources to reduce page size',
+    });
+  }
+  
+  return errors;
+}
+
+/**
+ * Generate image issues from image analysis
+ */
+function generateImageIssues(imageAnalysis: ImageAnalysis[]): ImageIssue[] {
+  return imageAnalysis
+    .filter(img => img.alt_text_status === 'missing' || (img.width && img.height && (img.width > 2000 || img.height > 2000)))
+    .map(img => ({
+      url: img.url,
+      type: img.alt_text_status === 'missing' ? 'no-alt' as const : 'large' as const,
+      altText: img.alt_text || undefined,
+      size: img.size_kb || undefined,
+      recommendation: img.recommendations[0] || 'Optimize this image',
+      element: `<img src="${img.url}" />`,
+    }));
+}
+
+/**
+ * Calculate summary scores
+ */
+function calculateSummary(seoErrors: SEOError[], seoMetrics: SEOMetrics, statistics: Statistics, misspellings: any[]): Summary {
+  const criticalIssues = seoErrors.filter(e => e.type === 'critical').length;
+  const warnings = seoErrors.filter(e => e.type === 'warning').length;
+  const suggestions = seoErrors.filter(e => e.type === 'suggestion').length;
+  
+  // Calculate scores (0-100)
+  const contentScore = Math.max(0, 100 - (criticalIssues * 20) - (warnings * 5));
+  const technicalScore = Math.max(0, 100 - (statistics.broken_links * 10) - (statistics.network_errors * 5));
+  const overallScore = Math.round((contentScore + technicalScore) / 2);
+  
+  // Estimate mobile/desktop speed based on page size and load time
+  const mobileSpeed = Math.max(0, Math.min(100, 100 - (seoMetrics.page_size / 50000)));
+  const desktopSpeed = Math.max(0, Math.min(100, 100 - (seoMetrics.page_size / 100000)));
+  
+  return {
+    overallScore,
+    contentScore,
+    technicalScore,
+    mobileSpeed: Math.round(mobileSpeed),
+    desktopSpeed: Math.round(desktopSpeed),
+    criticalIssues,
+    warnings,
+    suggestions,
+    spellingErrors: misspellings.length,
+    technicalIssues: seoErrors.filter(e => e.category === 'technical').length,
+    performanceIssues: seoErrors.filter(e => e.category === 'performance').length,
+    contentIssues: seoErrors.filter(e => e.category === 'seo').length,
+    redirectIssues: statistics.redirects,
+    webErrors: statistics.broken_links,
+    thirdPartyIssues: 0,
+    keywordOpportunities: 0,
+  };
+}
+
+/**
+ * Generate performance metrics
+ */
+function generatePerformanceMetrics(seoMetrics: SEOMetrics, statistics: Statistics, html: string): PerformanceMetrics {
+  const httpLinks = statistics.total_links; // Simplified
+  const httpsLinks = 0; // Would need to parse each link
+  
+  return {
+    totalLinks: statistics.total_links,
+    totalImages: seoMetrics.images_count,
+    pageSize: seoMetrics.page_size,
+    mobileLoadTime: seoMetrics.load_time,
+    desktopLoadTime: seoMetrics.load_time,
+    detectedLanguage: seoMetrics.lang || 'en',
+    readabilityScore: seoMetrics.readability_score,
+    exactWordCount: seoMetrics.word_count,
+    gzipEnabled: false, // Can't detect in browser
+    textToCodeRatio: Math.round((seoMetrics.word_count * 5) / html.length * 100),
+    navigationDepth: 0,
+    httpLinks,
+    httpsLinks,
+    internalLinks: statistics.internal_links,
+    externalLinks: statistics.external_links,
+    redirectCount: statistics.redirects,
+    imagesOver1MB: 0, // Can't determine without fetching
+    totalFileSize: seoMetrics.page_size,
+    compressionRatio: 0,
+    workingLinks: statistics.working_links,
+    thirdPartyDomains: 0,
+    mobileSpeed: Math.max(0, Math.min(100, 100 - (seoMetrics.page_size / 50000))),
+    desktopSpeed: Math.max(0, Math.min(100, 100 - (seoMetrics.page_size / 100000))),
+  };
+}
+
+/**
  * Main audit function
  */
 export async function performClientSideAudit(
@@ -436,7 +635,14 @@ export async function performClientSideAudit(
     onProgress?.(85, 'Checking spelling...');
     const misspellings = checkSpelling(html);
     
-    // Step 6: Complete
+    // Step 6: Generate additional data for UI
+    onProgress?.(95, 'Generating report...');
+    const seoErrors = generateSEOErrors(seoMetrics, imageAnalysis, statistics);
+    const imageIssues = generateImageIssues(imageAnalysis);
+    const performanceMetrics = generatePerformanceMetrics(seoMetrics, statistics, html);
+    const summary = calculateSummary(seoErrors, seoMetrics, statistics, misspellings);
+    
+    // Step 7: Complete
     onProgress?.(100, 'Analysis complete!');
     
     return {
@@ -465,6 +671,10 @@ export async function performClientSideAudit(
       errors_by_category: errorsByCategory,
       eloqua_form_fields: [],
       pdf_links: [],
+      seoErrors,
+      summary,
+      performanceMetrics,
+      imageIssues,
     };
   } catch (error: any) {
     throw new Error(`Audit failed: ${error.message}`);

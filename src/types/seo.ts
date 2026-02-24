@@ -24,6 +24,11 @@ export interface SEOAuditResult {
   errors_by_category: ErrorsByCategory;
   eloqua_form_fields: EloquaFormField[];
   pdf_links: PDFLink[];
+  // Additional fields for UI components
+  seoErrors: SEOError[];
+  summary: Summary;
+  performanceMetrics: PerformanceMetrics;
+  imageIssues: ImageIssue[];
 }
 
 export interface SEOMetrics {
