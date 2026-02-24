@@ -44,7 +44,7 @@ export const Charts: React.FC<ChartsProps> = ({ results }) => {
     { name: 'Readability', score: results.performanceMetrics.readabilityScore, target: 70 }
   ];
 
-  const categoryData = results.seoErrors.reduce((acc, error) => {
+  const categoryData = (results.seoErrors || []).reduce((acc, error) => {
     const category = error.category.charAt(0).toUpperCase() + error.category.slice(1);
     acc[category] = (acc[category] || 0) + 1;
     return acc;
