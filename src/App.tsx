@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { URLInput } from "./components/URLInput";
 import { AuditResults } from "./components/AuditResults";
 import { LoadingSpinner } from "./components/LoadingSpinner";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SEOAuditResult } from "./types/seo";
 import { performClientSideAudit } from "./utils/clientAudit";
 
@@ -171,35 +172,26 @@ function App() {
         )}
 
         {results && !isAnalyzing && (
-          <div>
-            {(() => {
-              try {
-                console.log('🎨 Rendering AuditResults component with:', {
-                  hasResults: !!results,
-                  url: results?.url,
-                  hasSeoMetrics: !!results?.seo_metrics,
-                  hasStatistics: !!results?.statistics,
-                });
-                return <AuditResults results={results} onNewAudit={handleNewAudit} />;
-              } catch (renderError: any) {
-                console.error('❌ Error rendering results:', renderError);
-                return (
-                  <div className="max-w-4xl mx-auto bg-red-50 border border-red-200 rounded-lg p-6">
-                    <h3 className="text-lg font-semibold text-red-800 mb-2">
-                      Error Displaying Results
-                    </h3>
-                    <p className="text-red-700 mb-4">{renderError.message}</p>
-                    <button
-                      onClick={handleNewAudit}
-                      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                    >
-                      Try Again
-                    </button>
-                  </div>
-                );
-              }
-            })()}
-          </div>
+          <ErrorBoundary
+            fallback={
+              <div className="max-w-4xl mx-auto bg-red-50 border border-red-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-red-800 mb-2">
+                  Error Displaying Results
+                </h3>
+                <p className="text-red-700 mb-4">
+                  An error occurred while rendering the audit results. This may be due to unexpected data format.
+                </p>
+                <button
+                  onClick={handleNewAudit}
+                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                >
+                  Try Again
+                </button>
+              </div>
+            }
+          >
+            <AuditResults results={results} onNewAudit={handleNewAudit} />
+          </ErrorBoundary>
         )}
       </div>
     </div>
