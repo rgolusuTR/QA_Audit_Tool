@@ -19,7 +19,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ results }) => {
   const infoIssues = [];
 
   // Critical Issues (Red)
-  if (results.statistics.broken_links > 0) {
+  if (results.statistics?.broken_links && results.statistics.broken_links > 0) {
     criticalIssues.push({
       title: `${results.statistics.broken_links} Broken Links Found`,
       description: 'Links that return 4xx/5xx errors or network failures',
