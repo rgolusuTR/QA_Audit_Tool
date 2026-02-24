@@ -5,37 +5,55 @@ import { SEOAuditResult, SEOMetrics, LinkResult, Statistics, ErrorsByCategory, I
  * Performs comprehensive website analysis entirely in the browser
  */
 
-// CORS proxy for fetching external pages
-const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+// CORS proxy options for fetching external pages
+const CORS_PROXIES = [
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.io/?',
+  'https://api.codetabs.com/v1/proxy?quest=',
+];
 
 /**
  * Fetch webpage content with CORS handling
  */
 async function fetchPageContent(url: string): Promise<string> {
-  try {
-    // Try direct fetch first
-    const response = await fetch(url, {
-      mode: 'cors',
-      credentials: 'omit',
-    });
-    
-    if (response.ok) {
-      return await response.text();
+  // For local/file URLs, try direct fetch
+  if (url.startsWith('file://') || url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1')) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        return await response.text();
+      }
+    } catch (error) {
+      throw new Error('Unable to fetch local file. Please use a publicly accessible URL.');
     }
-  } catch (error) {
-    // If direct fetch fails, try with CORS proxy
-    console.log('Direct fetch failed, using CORS proxy...');
   }
 
-  // Use CORS proxy as fallback
-  const proxyUrl = `${CORS_PROXY}${encodeURIComponent(url)}`;
-  const response = await fetch(proxyUrl);
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch page: ${response.statusText}`);
+  // Try CORS proxies in order
+  for (let i = 0; i < CORS_PROXIES.length; i++) {
+    try {
+      const proxyUrl = `${CORS_PROXIES[i]}${encodeURIComponent(url)}`;
+      console.log(`Attempting to fetch via proxy ${i + 1}/${CORS_PROXIES.length}:`, CORS_PROXIES[i]);
+      
+      const response = await fetch(proxyUrl, {
+        signal: AbortSignal.timeout(15000), // 15 second timeout
+      });
+      
+      if (response.ok) {
+        const html = await response.text();
+        console.log(`✅ Successfully fetched via proxy ${i + 1}`);
+        return html;
+      }
+    } catch (error: any) {
+      console.log(`❌ Proxy ${i + 1} failed:`, error.message);
+      // Try next proxy
+      if (i === CORS_PROXIES.length - 1) {
+        // Last proxy failed
+        throw new Error(`Unable to fetch webpage. All CORS proxies failed. The website may be blocking automated requests or may be temporarily unavailable.`);
+      }
+    }
   }
   
-  return await response.text();
+  throw new Error('Failed to fetch page content');
 }
 
 /**
