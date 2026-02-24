@@ -71,11 +71,28 @@ npm run build
 3. **View Results** - Comprehensive audit results with actionable insights
 4. **Export Data** - Download results as JSON for further analysis
 
-### Example URLs to Test
+### 🎯 Best URLs to Test
 
-- `https://example.com`
-- `https://www.wikipedia.org`
-- Any publicly accessible website
+Due to CORS restrictions, the tool works best with:
+
+✅ **Recommended:**
+- Local HTML files: `file:///C:/path/to/test-page.html`
+- The included `test-page.html` file (open in browser and copy URL)
+- Internal company websites
+- CORS-enabled websites
+
+⚠️ **May Have Limitations:**
+- `https://example.com` (CORS blocked by most external sites)
+- Most public websites (due to browser security)
+
+### 📋 What Gets Analyzed
+
+- ✅ SEO metrics (title, meta description, headings)
+- ✅ Link analysis (internal/external links)
+- ✅ Image optimization (alt text, dimensions)
+- ✅ Spell checking (basic)
+- ✅ Readability score (Flesch Reading Ease)
+- ✅ Page statistics (word count, page size)
 
 ## ⚠️ CORS Limitations
 
