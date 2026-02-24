@@ -40,19 +40,25 @@ export const SEOMetricsTab: React.FC<SEOMetricsTabProps> = ({ seoMetrics }) => {
     return 'Very Difficult';
   };
 
-  const titleGood = seoMetrics.title_length >= 30 && seoMetrics.title_length <= 65;
-  const titleWarning = seoMetrics.title_length > 0 && (seoMetrics.title_length < 30 || seoMetrics.title_length > 65);
+  const titleLength = seoMetrics?.title_length || 0;
+  const titleGood = titleLength >= 30 && titleLength <= 65;
+  const titleWarning = titleLength > 0 && (titleLength < 30 || titleLength > 65);
 
-  const descGood = seoMetrics.meta_description_length >= 120 && seoMetrics.meta_description_length <= 155;
-  const descWarning = seoMetrics.meta_description_length > 0 && (seoMetrics.meta_description_length < 120 || seoMetrics.meta_description_length > 155);
+  const descLength = seoMetrics?.meta_description_length || 0;
+  const descGood = descLength >= 120 && descLength <= 155;
+  const descWarning = descLength > 0 && (descLength < 120 || descLength > 155);
 
-  const h1Good = seoMetrics.h1_tags.length === 1;
-  const h1Warning = seoMetrics.h1_tags.length > 1;
+  const h1Tags = seoMetrics?.h1_tags || [];
+  const h1Good = h1Tags.length === 1;
+  const h1Warning = h1Tags.length > 1;
 
-  const wordCountGood = seoMetrics.word_count >= 300;
-  const imagesGood = seoMetrics.images_without_alt === 0;
-  const loadTimeGood = seoMetrics.load_time < 3;
-  const loadTimeWarning = seoMetrics.load_time >= 3 && seoMetrics.load_time < 5;
+  const wordCount = seoMetrics?.word_count || 0;
+  const wordCountGood = wordCount >= 300;
+  const imagesWithoutAlt = seoMetrics?.images_without_alt || 0;
+  const imagesGood = imagesWithoutAlt === 0;
+  const loadTime = seoMetrics?.load_time || 0;
+  const loadTimeGood = loadTime < 3;
+  const loadTimeWarning = loadTime >= 3 && loadTime < 5;
 
   return (
     <div className="space-y-6">
@@ -70,19 +76,19 @@ export const SEOMetricsTab: React.FC<SEOMetricsTabProps> = ({ seoMetrics }) => {
               <span className="font-medium">Page Title</span>
             </div>
             <span className="text-sm font-semibold">
-              {seoMetrics.title_length} characters
+              {titleLength} characters
             </span>
           </div>
           
           <p className="text-sm mb-2 font-mono bg-white bg-opacity-50 p-2 rounded">
-            {seoMetrics.title || 'No title found'}
+            {seoMetrics?.title || 'No title found'}
           </p>
           
           <div className="text-xs">
             <strong>Recommendation:</strong> {
               titleGood ? 'Title length is optimal (30-65 characters)' :
-              seoMetrics.title_length === 0 ? 'Add a descriptive title tag' :
-              seoMetrics.title_length < 30 ? 'Consider expanding your title to 30-65 characters' :
+              titleLength === 0 ? 'Add a descriptive title tag' :
+              titleLength < 30 ? 'Consider expanding your title to 30-65 characters' :
               'Consider shortening your title to under 65 characters'
             }
           </div>
@@ -103,19 +109,19 @@ export const SEOMetricsTab: React.FC<SEOMetricsTabProps> = ({ seoMetrics }) => {
               <span className="font-medium">Meta Description</span>
             </div>
             <span className="text-sm font-semibold">
-              {seoMetrics.meta_description_length} characters
+              {descLength} characters
             </span>
           </div>
           
           <p className="text-sm mb-2 font-mono bg-white bg-opacity-50 p-2 rounded">
-            {seoMetrics.meta_description || 'No meta description found'}
+            {seoMetrics?.meta_description || 'No meta description found'}
           </p>
           
           <div className="text-xs">
             <strong>Recommendation:</strong> {
               descGood ? 'Meta description length is optimal (120-155 characters)' :
-              seoMetrics.meta_description_length === 0 ? 'Add a compelling meta description' :
-              seoMetrics.meta_description_length < 120 ? 'Consider expanding your meta description to 120-155 characters' :
+              descLength === 0 ? 'Add a compelling meta description' :
+              descLength < 120 ? 'Consider expanding your meta description to 120-155 characters' :
               'Consider shortening your meta description to under 155 characters'
             }
           </div>
@@ -137,17 +143,17 @@ export const SEOMetricsTab: React.FC<SEOMetricsTabProps> = ({ seoMetrics }) => {
                 {getStatusIcon(h1Good, h1Warning)}
                 <span className="font-medium">H1 Tags</span>
               </div>
-              <span className="text-sm font-semibold">{seoMetrics.h1_tags.length}</span>
+              <span className="text-sm font-semibold">{h1Tags.length}</span>
             </div>
             <div className="text-xs">
               {h1Good ? 'Perfect! One H1 tag found' :
-               seoMetrics.h1_tags.length === 0 ? 'Add exactly one H1 tag' :
+               h1Tags.length === 0 ? 'Add exactly one H1 tag' :
                'Use only one H1 tag per page'}
             </div>
-            {seoMetrics.h1_tags.length > 0 && (
+            {h1Tags.length > 0 && (
               <div className="mt-3 space-y-2">
                 <div className="text-xs font-medium text-gray-700">H1 Content:</div>
-                {seoMetrics.h1_tags.map((h1, index) => (
+                {h1Tags.map((h1, index) => (
                   <div key={index} className="bg-white bg-opacity-70 p-2 rounded text-xs">
                     <div className="font-mono text-gray-800 break-words">{h1}</div>
                   </div>
@@ -160,15 +166,15 @@ export const SEOMetricsTab: React.FC<SEOMetricsTabProps> = ({ seoMetrics }) => {
           <div className="border border-gray-200 rounded-lg p-4 bg-blue-50">
             <div className="flex items-center justify-between mb-2">
               <span className="font-medium text-blue-800">H2 Tags</span>
-              <span className="text-sm font-semibold text-blue-600">{seoMetrics.h2_tags.length}</span>
+              <span className="text-sm font-semibold text-blue-600">{seoMetrics?.h2_tags?.length || 0}</span>
             </div>
             <div className="text-xs text-blue-700">
-              {seoMetrics.h2_tags.length === 0 ? 'No H2 tags found' : 'Good structure for content hierarchy'}
+              {(seoMetrics?.h2_tags?.length || 0) === 0 ? 'No H2 tags found' : 'Good structure for content hierarchy'}
             </div>
-            {seoMetrics.h2_tags.length > 0 && (
+            {(seoMetrics?.h2_tags?.length || 0) > 0 && (
               <div className="mt-3 space-y-2 max-h-48 overflow-y-auto">
                 <div className="text-xs font-medium text-blue-800">H2 Content:</div>
-                {seoMetrics.h2_tags.map((h2, index) => (
+                {(seoMetrics?.h2_tags || []).map((h2, index) => (
                   <div key={index} className="bg-white bg-opacity-70 p-2 rounded text-xs">
                     <div className="font-mono text-blue-900 break-words">{h2}</div>
                   </div>
@@ -181,15 +187,15 @@ export const SEOMetricsTab: React.FC<SEOMetricsTabProps> = ({ seoMetrics }) => {
           <div className="border border-gray-200 rounded-lg p-4 bg-green-50">
             <div className="flex items-center justify-between mb-2">
               <span className="font-medium text-green-800">H3 Tags</span>
-              <span className="text-sm font-semibold text-green-600">{seoMetrics.h3_tags.length}</span>
+              <span className="text-sm font-semibold text-green-600">{seoMetrics?.h3_tags?.length || 0}</span>
             </div>
             <div className="text-xs text-green-700">
-              {seoMetrics.h3_tags.length === 0 ? 'No H3 tags found' : 'Supports detailed content structure'}
+              {(seoMetrics?.h3_tags?.length || 0) === 0 ? 'No H3 tags found' : 'Supports detailed content structure'}
             </div>
-            {seoMetrics.h3_tags.length > 0 && (
+            {(seoMetrics?.h3_tags?.length || 0) > 0 && (
               <div className="mt-3 space-y-2 max-h-48 overflow-y-auto">
                 <div className="text-xs font-medium text-green-800">H3 Content:</div>
-                {seoMetrics.h3_tags.map((h3, index) => (
+                {(seoMetrics?.h3_tags || []).map((h3, index) => (
                   <div key={index} className="bg-white bg-opacity-70 p-2 rounded text-xs">
                     <div className="font-mono text-green-900 break-words">{h3}</div>
                   </div>
@@ -272,15 +278,15 @@ export const SEOMetricsTab: React.FC<SEOMetricsTabProps> = ({ seoMetrics }) => {
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-center">
               <div className="bg-white rounded p-3">
-                <div className="text-lg font-bold text-purple-600">{seoMetrics.h1_tags.length}</div>
+                <div className="text-lg font-bold text-purple-600">{h1Tags.length}</div>
                 <div className="text-xs text-gray-600">H1 Tags</div>
               </div>
               <div className="bg-white rounded p-3">
-                <div className="text-lg font-bold text-blue-600">{seoMetrics.h2_tags.length}</div>
+                <div className="text-lg font-bold text-blue-600">{seoMetrics?.h2_tags?.length || 0}</div>
                 <div className="text-xs text-gray-600">H2 Tags</div>
               </div>
               <div className="bg-white rounded p-3">
-                <div className="text-lg font-bold text-green-600">{seoMetrics.h3_tags.length}</div>
+                <div className="text-lg font-bold text-green-600">{seoMetrics?.h3_tags?.length || 0}</div>
                 <div className="text-xs text-gray-600">H3 Tags</div>
               </div>
               <div className="bg-white rounded p-3">
@@ -302,13 +308,13 @@ export const SEOMetricsTab: React.FC<SEOMetricsTabProps> = ({ seoMetrics }) => {
               <div className="text-sm text-blue-800">
                 <strong>Heading Hierarchy Recommendations:</strong>
                 <ul className="mt-2 space-y-1 text-xs">
-                  {seoMetrics.h1_tags.length === 0 && (
+                  {h1Tags.length === 0 && (
                     <li>• Add exactly one H1 tag as the main page heading</li>
                   )}
-                  {seoMetrics.h1_tags.length > 1 && (
+                  {h1Tags.length > 1 && (
                     <li>• Use only one H1 tag per page for better SEO</li>
                   )}
-                  {seoMetrics.h2_tags.length === 0 && (
+                  {(seoMetrics?.h2_tags?.length || 0) === 0 && (
                     <li>• Consider adding H2 tags for main section headings</li>
                   )}
                   <li>• Maintain proper heading hierarchy (H1 → H2 → H3 → H4 → H5 → H6)</li>
@@ -334,10 +340,10 @@ export const SEOMetricsTab: React.FC<SEOMetricsTabProps> = ({ seoMetrics }) => {
                 {getStatusIcon(wordCountGood)}
                 <span className="font-medium">Page Size</span>
               </div>
-              <span className="text-sm font-semibold">{(seoMetrics.page_size / 1024).toFixed(1)} KB</span>
+              <span className="text-sm font-semibold">{((seoMetrics?.page_size || 0) / 1024).toFixed(1)} KB</span>
             </div>
             <div className="text-xs">
-              {seoMetrics.page_size > 1048576 ? 'Large page size - consider optimization' : 'Good page size'}
+              {(seoMetrics?.page_size || 0) > 1048576 ? 'Large page size - consider optimization' : 'Good page size'}
             </div>
           </div>
 
@@ -356,7 +362,7 @@ export const SEOMetricsTab: React.FC<SEOMetricsTabProps> = ({ seoMetrics }) => {
           <div className="border border-gray-200 rounded-lg p-4 bg-blue-50">
             <div className="flex items-center justify-between mb-2">
               <span className="font-medium text-blue-800">Language</span>
-              <span className="text-sm font-semibold text-blue-600">{seoMetrics.lang}</span>
+              <span className="text-sm font-semibold text-blue-600">{seoMetrics?.lang || 'Unknown'}</span>
             </div>
             <div className="text-xs text-blue-700">
               Detected language
@@ -376,7 +382,7 @@ export const SEOMetricsTab: React.FC<SEOMetricsTabProps> = ({ seoMetrics }) => {
           <div className="border border-gray-200 rounded-lg p-4 bg-green-50">
             <div className="flex items-center justify-between mb-2">
               <span className="font-medium text-green-800">Total Images</span>
-              <span className="text-sm font-semibold text-green-600">{seoMetrics.images_count}</span>
+              <span className="text-sm font-semibold text-green-600">{seoMetrics?.images_count || 0}</span>
             </div>
             <div className="text-xs text-green-700">
               Images found on page
@@ -389,7 +395,7 @@ export const SEOMetricsTab: React.FC<SEOMetricsTabProps> = ({ seoMetrics }) => {
                 {getStatusIcon(imagesGood)}
                 <span className="font-medium">Missing Alt Text</span>
               </div>
-              <span className="text-sm font-semibold">{seoMetrics.images_without_alt}</span>
+              <span className="text-sm font-semibold">{imagesWithoutAlt}</span>
             </div>
             <div className="text-xs">
               {imagesGood ? 'All images have alt text' : 'Add alt text to improve accessibility'}
@@ -402,7 +408,7 @@ export const SEOMetricsTab: React.FC<SEOMetricsTabProps> = ({ seoMetrics }) => {
                 {getStatusIcon(loadTimeGood, loadTimeWarning)}
                 <span className="font-medium">Load Time</span>
               </div>
-              <span className="text-sm font-semibold">{seoMetrics.load_time.toFixed(2)}s</span>
+              <span className="text-sm font-semibold">{loadTime.toFixed(2)}s</span>
             </div>
             <div className="text-xs">
               {loadTimeGood ? 'Fast loading time' :
@@ -425,16 +431,16 @@ export const SEOMetricsTab: React.FC<SEOMetricsTabProps> = ({ seoMetrics }) => {
             <div className="flex items-center justify-between mb-2">
               <span className="font-medium text-gray-800">Canonical URL</span>
               <span className="text-xs text-gray-600">
-                {seoMetrics.canonical_url ? 'Set' : 'Not Set'}
+                {seoMetrics?.canonical_url ? 'Set' : 'Not Set'}
               </span>
             </div>
-            {seoMetrics.canonical_url && (
+            {seoMetrics?.canonical_url && (
               <div className="text-xs text-gray-700 font-mono bg-white p-2 rounded break-all">
                 {seoMetrics.canonical_url}
               </div>
             )}
             <div className="text-xs mt-2 text-gray-600">
-              {seoMetrics.canonical_url ? 'Good for preventing duplicate content' : 'Consider adding canonical URL'}
+              {seoMetrics?.canonical_url ? 'Good for preventing duplicate content' : 'Consider adding canonical URL'}
             </div>
           </div>
 
@@ -442,11 +448,11 @@ export const SEOMetricsTab: React.FC<SEOMetricsTabProps> = ({ seoMetrics }) => {
             <div className="flex items-center justify-between mb-2">
               <span className="font-medium text-gray-800">Meta Robots</span>
               <span className="text-xs text-gray-600">
-                {seoMetrics.meta_robots || 'Default'}
+                {seoMetrics?.meta_robots || 'Default'}
               </span>
             </div>
             <div className="text-xs text-gray-700">
-              {seoMetrics.meta_robots || 'Using default crawling behavior'}
+              {seoMetrics?.meta_robots || 'Using default crawling behavior'}
             </div>
           </div>
         </div>

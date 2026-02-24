@@ -122,7 +122,7 @@ export const AuditResults: React.FC<AuditResultsProps> = ({ results, onNewAudit 
       )}
 
       {activeTab === 'seo-metrics' && (
-        <SEOMetricsTab seoMetrics={results.seo_metrics} />
+        <SEOMetricsTab seoMetrics={results.seo_metrics || {}} />
       )}
 
 
