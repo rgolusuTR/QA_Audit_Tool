@@ -47,8 +47,10 @@ function App() {
       }
 
       setTimeout(() => {
+        console.log('📊 Setting results state...');
         setResults(auditResults);
         setIsAnalyzing(false);
+        console.log('✅ Results state updated, rendering results component');
       }, 500);
     } catch (err: any) {
       console.error("❌ Client-side audit error:", err);
@@ -169,7 +171,35 @@ function App() {
         )}
 
         {results && !isAnalyzing && (
-          <AuditResults results={results} onNewAudit={handleNewAudit} />
+          <div>
+            {(() => {
+              try {
+                console.log('🎨 Rendering AuditResults component with:', {
+                  hasResults: !!results,
+                  url: results?.url,
+                  hasSeoMetrics: !!results?.seo_metrics,
+                  hasStatistics: !!results?.statistics,
+                });
+                return <AuditResults results={results} onNewAudit={handleNewAudit} />;
+              } catch (renderError: any) {
+                console.error('❌ Error rendering results:', renderError);
+                return (
+                  <div className="max-w-4xl mx-auto bg-red-50 border border-red-200 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-red-800 mb-2">
+                      Error Displaying Results
+                    </h3>
+                    <p className="text-red-700 mb-4">{renderError.message}</p>
+                    <button
+                      onClick={handleNewAudit}
+                      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                );
+              }
+            })()}
+          </div>
         )}
       </div>
     </div>

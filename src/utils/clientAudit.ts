@@ -411,9 +411,13 @@ export async function performClientSideAudit(
   const startTime = Date.now();
   
   try {
+    console.log('🔍 Starting audit for:', url);
+    
     // Step 1: Fetch page content
     onProgress?.(10, 'Fetching webpage content...');
+    console.log('📥 Fetching page content...');
     const html = await fetchPageContent(url);
+    console.log('✅ Page content fetched, length:', html.length);
     
     // Step 2: Extract SEO metrics
     onProgress?.(30, 'Analyzing SEO metrics...');
