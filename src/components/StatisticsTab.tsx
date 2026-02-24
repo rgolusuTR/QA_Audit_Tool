@@ -17,8 +17,9 @@ interface StatisticsTabProps {
 }
 
 export const StatisticsTab: React.FC<StatisticsTabProps> = ({ statistics, seoMetrics }) => {
-  const statusCodeEntries = Object.entries(statistics.status_code_distribution)
-    .sort(([a], [b]) => parseInt(a) - parseInt(b));
+  const statusCodeEntries = statistics.status_code_distribution 
+    ? Object.entries(statistics.status_code_distribution).sort(([a], [b]) => parseInt(a) - parseInt(b))
+    : [];
 
   const getStatusCodeColor = (code: number) => {
     if (code >= 200 && code < 300) return 'text-green-600 bg-green-50';
