@@ -34,14 +34,25 @@ async function fetchPageContent(url: string): Promise<string> {
       const proxyUrl = `${CORS_PROXIES[i]}${encodeURIComponent(url)}`;
       console.log(`Attempting to fetch via proxy ${i + 1}/${CORS_PROXIES.length}:`, CORS_PROXIES[i]);
       
-      const response = await fetch(proxyUrl, {
-        signal: AbortSignal.timeout(15000), // 15 second timeout
-      });
+      // Create timeout controller
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
       
-      if (response.ok) {
-        const html = await response.text();
-        console.log(`✅ Successfully fetched via proxy ${i + 1}`);
-        return html;
+      try {
+        const response = await fetch(proxyUrl, {
+          signal: controller.signal,
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          const html = await response.text();
+          console.log(`✅ Successfully fetched via proxy ${i + 1}`);
+          return html;
+        }
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        throw fetchError;
       }
     } catch (error: any) {
       console.log(`❌ Proxy ${i + 1} failed:`, error.message);
